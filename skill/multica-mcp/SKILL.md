@@ -1,6 +1,6 @@
 ---
 name: multica-mcp
-description: Activates when the agent should route coding work through the Multica MCP server instead of doing everything locally. Covers agent selection (Claude, Codex, Gemini, OpenCode Go including Kimi K2.6, DeepSeek V4, Qwen, MiniMax), sprint planning, backlog triage, parallel task breakdown, audit croise, and SwarmReview invocation for PR reviews.
+description: Activates when the agent should route coding work through the Multica MCP server instead of doing everything locally. Covers agent selection (Claude, Codex, Gemini, OpenCode Go including Kimi K2.6, DeepSeek V4, Qwen, MiniMax), sprint planning, backlog triage, parallel task breakdown, audit croisé, and SwarmReview invocation for PR reviews.
 ---
 
 # Overview
@@ -64,20 +64,20 @@ Do not trigger this skill for trivial one-shot work that is faster to complete l
 | `opencode-glm-5-1` | Long-horizon, overnight, budget, 8h+ |
 | `opencode-kimi-k2-6` | Thinking mode natif, 262k context, analyse performance, judgment complexe |
 | `opencode-deepseek-v4-flash` | 1M context, thinking mode, 13B active, iterations rapides volume |
-| `opencode-deepseek-v4-pro` | 49B active, SWE-bench 80%, meta-review alternative a Opus |
+| `opencode-deepseek-v4-pro` | 49B active, SWE-bench 80%, meta-review alternative à Opus |
 | `opencode-qwen3-6-plus` | Text-heavy, conventions, documentation, compliance checks |
-| `opencode-minimax-m2-7` | Generaliste solide, release analysis, format Anthropic API |
+| `opencode-minimax-m2-7` | Généraliste solide, release analysis, format Anthropic API |
 | `opencode-qwen3-5-plus` | 50k req/mois, volume brainstorming |
-| `opencode-mimo-v2-5` | Alternative volume a qwen3.5-plus |
+| `opencode-mimo-v2-5` | Alternative volume à qwen3.5-plus |
 | `opencode-glm-5` | Alternative a GLM 5.1, quota plus large |
 
-Note: les agents `opencode-*` listes ci-dessus necessitent le setup Multica de KOR-735 pour etre fonctionnels.
+Note: les agents `opencode-*` listés ci-dessus nécessitent le setup Multica de KOR-735 pour être fonctionnels.
 
 # Tool call caps par agent
 
 Toujours inclure un hard cap dans les instructions de l'issue pour eviter les boucles:
 
-| Agent | Hard cap recommande |
+| Agent | Hard cap recommandé |
 |-------|-------------------|
 | `claude-haiku` | 20 |
 | `codex-quick` | 15 |
@@ -140,7 +140,7 @@ Use the routing rules below as defaults. **Consider context, not just task type*
 - `opencode-glm-5-1`: long-horizon tasks (8h+), budget tier via Z.ai Coding Plan. Route here for overnight or weekend heavy batch work when quota allows.
 - `opencode-kimi-k2-6`: performance analysis avec thinking mode natif, judgment complexe, 262k context
 - `opencode-deepseek-v4-flash`: long context 1M tokens, iterations rapides volume, open-weights MIT
-- `opencode-deepseek-v4-pro`: meta-review alternative a Opus, 49B active, SWE-bench 80%
+- `opencode-deepseek-v4-pro`: meta-review alternative à Opus, 49B active, SWE-bench 80%
 - `opencode-qwen3-6-plus`: compliance, conventions, AGENTS.md, documentation et text-heavy reading
 - `opencode-minimax-m2-7`: release analysis, holistic PR review, format Anthropic API
 - `opencode-qwen3-5-plus`: brainstorming volume et iterations abondantes
@@ -233,11 +233,11 @@ Exemple a eviter: Issue 1 = "installer les outils", Issue 2 = "mettre a jour le 
 Mieux: Une seule issue "installer les outils + mettre a jour le config" avec un follow-up comment
 
 Exemple correct de split: Issue A = "fix API routes" (backend), Issue B = "fix UI components" (frontend)
-Ces deux issues touchent des fichiers differents et peuvent tourner en parallele.
+Ces deux issues touchent des fichiers differents et peuvent tourner en parallèle.
 
 ## 7. Sequentialisation obligatoire
 
-**Ne JAMAIS lancer des issues en parallele qui touchent aux memes fichiers.**
+**Ne JAMAIS lancer des issues en parallèle qui touchent aux memes fichiers.**
 
 Exemples a eviter: plusieurs fixes CSS sur `style.css`, plusieurs modifs JS sur `app.js`.
 
@@ -268,7 +268,7 @@ Quand un agent fait partie d'une chaine d'issues sequentielles (ex: MOIK-03 -> M
 
 Pour creer une chaine d'issues sans qu'elles soient pickup accidentellement :
 
-1. Creer toutes les issues SANS assignee (arrive en `todo` par defaut)
+1. Creer toutes les issues SANS assignee (arrive en `todo` par défaut)
 2. Passer chaque issue en `backlog`
 3. Ajouter l'assignee sur chaque issue
 4. Ne passer en `todo` QUE la premiere issue de la chaine
@@ -338,7 +338,7 @@ Prefer `multica_add_comment` over a shell `multica issue comment add` call when 
 Le reviewer automatique Multica passe les issues de `in_review` a `done` toutes les heures.
 
 Les issues "disparaissent" du board sans action manuelle. Pour eviter ce comportement (quand tu veux une vraie review humaine):
-- utiliser le pattern audit croise (2 agents review + promotion manuelle par Arthur)
+- utiliser le pattern audit croisé (2 agents review + promotion manuelle par Arthur)
 - ou retirer l'assignee et mettre `blocked` avec un commentaire explicite
 
 ## 11. Verify the result
@@ -374,11 +374,11 @@ Use this quick matrix first, then open the detailed reference if needed.
 | Long-horizon batch work, budget tier, overnight/weekend | `opencode-glm-5-1` | GLM 5.1 via Z.ai Coding Plan. See providers.md for quota rules. |
 | Code analysis avec thinking mode natif | `opencode-kimi-k2-6` | 3450 req/5h boost |
 | Long context (1M tokens) | `opencode-deepseek-v4-flash` | 7450 req/5h, open-weights MIT |
-| Meta-review alternative a Opus | `opencode-deepseek-v4-pro` | Opus-level a $3.48/1M output, 80% SWE-bench |
+| Meta-review alternative à Opus | `opencode-deepseek-v4-pro` | Opus-level à $3.48/1M output, 80% SWE-bench |
 | Compliance / conventions / AGENTS.md | `opencode-qwen3-6-plus` | Text-heavy reading |
 | Release / holistic PR review | `opencode-minimax-m2-7` | Format Anthropic API |
 | Brainstorming volume (10k+ req/5h) | `opencode-qwen3-5-plus` | Le plus abundant |
-| Long-horizon batch (8h+) | `opencode-glm-5-1` | GLM via Z.ai, inchange |
+| Long-horizon batch (8h+) | `opencode-glm-5-1` | GLM via Z.ai, inchangé |
 
 # Providers
 
@@ -387,9 +387,9 @@ Use this quick matrix first, then open the detailed reference if needed.
 **Env var**: `OPENCODE_GO_API_KEY`
 **Endpoint**: `https://opencode.ai/zen/go/v1/chat/completions` (ou `/v1/messages` pour MiniMax)
 **Format**: OpenAI-compatible (sauf MiniMax: Anthropic)
-**Subscription**: $10/mois ($5 first month), couvre tous les modeles curated
+**Subscription**: $10/mois ($5 first month), couvre tous les modèles curated
 **Usage limits**: $12/5h, $30/semaine, $60/mois (en valeur dollar, pas en requests)
-**Thinking mode**: natif, ne PAS desactiver via flags
+**Thinking mode**: natif, ne PAS désactiver via flags
 **Zero retention**: providers suivent zero-retention policy
 
 Route vers les opencode-* agents pour:
@@ -470,7 +470,7 @@ gh api repos/Korkyzer/{REPO}/pulls/{PR}/comments \
 | `/delight` | Micro-interactions |
 | `/adapt` | Responsive/adaptatif |
 | `/optimize` | Performance percue |
-| `/design-taste-frontend` | Evaluation premium vs AI-generated |
+| `/design-taste-frontend` | Evaluation premium vs contenu généré automatiquement |
 | `/full-output-enforcement` | Forcer 100% du code sans paresse |
 
 # Autopilots actifs
@@ -499,7 +499,7 @@ SwarmReview est un outil multi-agent de code review pour PRs GitHub, inspire de 
 
 - **security**: Codex CLI (gpt-5.5-medium)
 - **quality**: Codex CLI (gpt-5.5-low)
-- **performance**: OpenCode Go Kimi K2.6 (thinking mode active)
+- **performance**: OpenCode Go Kimi K2.6 (thinking mode activé)
 - **coordinator**: Claude CLI (claude-sonnet-4-6) pour judge pass
 
 ## Invocation
@@ -516,28 +516,28 @@ Le pipeline:
 
 1. Fetch le diff via `gh pr diff`
 2. Assess risk tier (trivial/lite/full)
-3. Spawn 3 specialists en parallele (2 Codex CLI subprocess + 1 OpenCode Go API call)
+3. Spawn 3 specialists en parallèle (2 Codex CLI subprocess + 1 OpenCode Go API call)
 4. Coordinator judge pass avec severity calibration + scale-dependent filtering
 5. Post final review via `gh pr review` sur le PR GitHub
 
-## Capacites
+## Capacités
 
-- Severity calibration (security path traversal = critical par defaut)
-- Scale-dependent findings (prefixe `[SCALE:HIGH]` pour patterns reels mais impact nul a scale actuel)
+- Severity calibration (security path traversal = critical par défaut)
+- Scale-dependent findings (préfixe `[SCALE:HIGH]` pour patterns réels mais impact nul à scale actuel)
 - Cloudflare rubric pour approval decision (approved / approved_with_comments / minor_issues / significant_concerns)
-- Pipeline Notes automatique si un specialist fail (visibilite partial runs)
+- Pipeline Notes automatique si un specialist fail (visibilité partial runs)
 
-## Cout
+## Coût
 
-~$10/mois fixe (OpenCode Go sub) + quota Codex CLI Arthur (deja existant)
+~$10/mois fixe (OpenCode Go sub) + quota Codex CLI Arthur (déjà existant)
 Par review: ~4-8 minutes, tokens Kimi ~6-10k output
 
-## Quand declencher via Multica
+## Quand déclencher via Multica
 
 Si une issue Multica demande un review de PR:
 
 ```
-Creer une issue avec template:
+Créer une issue avec template:
 [SWRM-REVIEW] Review PR <url>
 Assignee: codex-standard
 Task: Run swarmreview binary locally:
@@ -550,9 +550,9 @@ Mais le plus souvent, Arthur l'invoque directement depuis son terminal, pas via 
 
 ## Out of scope (NE PAS faire)
 
-- Ne PAS creer d'agents Multica `swarmreview-*`. Pas d'orchestration via Multica, juste CLI standalone.
-- Ne PAS utiliser Requesty (migration vers OpenCode Go effectuee).
-- Ne PAS desactiver le thinking mode de Kimi K2.6 (regression).
+- Ne PAS créer d'agents Multica `swarmreview-*`. Pas d'orchestration via Multica, juste CLI standalone.
+- Ne PAS utiliser Requesty (migration vers OpenCode Go effectuée).
+- Ne PAS désactiver le thinking mode de Kimi K2.6 (régression).
 
 # Anti-patterns
 
@@ -568,12 +568,12 @@ Avoid these mistakes:
 - Do not delegate destructive or broad filesystem work without explicit user consent
 - Do not switch assignee on a `done` or `cancelled` issue without checking status semantics
 - Ne PAS utiliser Requesty (migration OpenCode Go shipped le 24/04/26)
-- Ne PAS creer d'agents Multica specifiques a SwarmReview (c'est un binaire standalone)
-- Ne PAS desactiver thinking mode sur Kimi K2.6 ou DeepSeek V4 (regression qualite)
+- Ne PAS créer d'agents Multica spécifiques à SwarmReview (c'est un binaire standalone)
+- Ne PAS désactiver thinking mode sur Kimi K2.6 ou DeepSeek V4 (régression qualité)
 - **Do not ask an agent to restart, stop, or stop-and-start the Multica daemon. The agent runs inside the daemon and will kill its own parent.**
 - **Do not put issues in `blocked` while waiting for human input. Prefer `in_progress` with a comment. Blocked issues can have re-pickup glitches.**
 - Do not route GLM 5.1 during peak hours without checking quota multipliers
-- **Ne jamais lancer en parallele des issues qui touchent aux memes fichiers. Toujours sequentialiser.**
+- **Ne jamais lancer en parallèle des issues qui touchent aux memes fichiers. Toujours sequentialiser.**
 - **Ne jamais utiliser le short ID (KOR-XXX) comme `parent_issue_id`. Toujours utiliser le UUID complet.**
 - **Ne jamais assigner `claude-haiku` ou `codex-quick` a une issue dans une chaine sequentielle.** Minimum : `claude-sonnet` ou `codex-standard`.
 - **Utiliser `multica_add_comment` (MCP) pour les commentaires de chainage.** Jamais `multica issue comment add` (CLI) : les commentaires CLI sont ignores par le daemon comme triggers de pickup.
