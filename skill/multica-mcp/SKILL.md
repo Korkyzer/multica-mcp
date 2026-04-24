@@ -491,7 +491,7 @@ SwarmReview est un outil multi-agent de code review pour PRs GitHub, inspire de 
 ## Architecture
 
 - Repo: `Korkyzer/swarmreview` (private)
-- Local: `~/Users/korky/Code/swarmreview/`
+- Local: `~/Code/swarmreview/`
 - Stack: TypeScript + Bun runtime
 - Provider: OpenCode Go (via `OPENCODE_GO_API_KEY`)
 
@@ -505,7 +505,7 @@ SwarmReview est un outil multi-agent de code review pour PRs GitHub, inspire de 
 ## Invocation
 
 ```bash
-cd ~/Users/korky/Code/swarmreview
+cd ~/Code/swarmreview
 ./bin/swarmreview <pr-url>
 
 # Exemple:
@@ -541,7 +541,7 @@ Créer une issue avec template:
 [SWRM-REVIEW] Review PR <url>
 Assignee: codex-standard
 Task: Run swarmreview binary locally:
-  cd ~/Users/korky/Code/swarmreview
+  cd ~/Code/swarmreview
   ./bin/swarmreview <pr-url>
 Collect the output and post as comment.
 ```
