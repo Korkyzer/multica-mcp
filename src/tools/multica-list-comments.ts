@@ -27,8 +27,6 @@ export async function multicaListComments(
 ): Promise<ListResult<CommentSummary>> {
   const issueId = await resolveIssueId(input.issue_id);
   const args = ["issue", "comment", "list", issueId];
-  if (input.limit) args.push("--limit", String(input.limit));
-  if (input.offset) args.push("--offset", String(input.offset));
   if (input.since) args.push("--since", input.since);
 
   const [comments, agents] = await Promise.all([
@@ -40,7 +38,9 @@ export async function multicaListComments(
     return { items: [], state: "empty", message: "No comments match." };
   }
 
-  const items = comments.map((comment) => ({
+  const start = input.offset ?? 0;
+  const end = input.limit ? start + input.limit : undefined;
+  const items = comments.slice(start, end).map((comment) => ({
     id: comment.id,
     parent_id: comment.parent_id,
     author:
@@ -51,6 +51,10 @@ export async function multicaListComments(
     content: comment.content,
     created_at: comment.created_at,
   }));
+
+  if (items.length === 0) {
+    return { items: [], state: "empty", message: "No comments match." };
+  }
 
   return { items, state: "loaded" };
 }
