@@ -21,7 +21,7 @@ type Member = {
 export async function multicaWorkspaceMembers(
   input: MulticaWorkspaceMembersInput,
 ): Promise<ListResult<Member>> {
-  const args = ["workspace", "members"];
+  const args = ["workspace", "member", "list"];
   if (input.workspace_id) args.push(input.workspace_id);
   const members = (await runMulticaJson<Member[]>(args)) ?? [];
   if (members.length === 0) {
