@@ -25,10 +25,14 @@ type CommentSummary = {
 export async function multicaListComments(
   input: MulticaListCommentsInput,
 ): Promise<ListResult<CommentSummary>> {
+  if (input.offset !== undefined && input.offset > 0) {
+    throw new Error(
+      "Comment offset pagination is no longer supported by the Multica CLI; use limit and since instead.",
+    );
+  }
   const issueId = await resolveIssueId(input.issue_id);
   const args = ["issue", "comment", "list", issueId];
-  if (input.limit) args.push("--limit", String(input.limit));
-  if (input.offset) args.push("--offset", String(input.offset));
+  if (input.limit) args.push("--recent", String(input.limit));
   if (input.since) args.push("--since", input.since);
 
   const [comments, agents] = await Promise.all([
