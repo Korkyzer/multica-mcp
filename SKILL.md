@@ -10,20 +10,19 @@ Agent names in this document (`claude-sonnet`, `codex-standard`, `gemini-pro`, e
 
 1. [When to use the MCP](#1-when-to-use-the-mcp)
 2. [Core workflow](#2-core-workflow)
-3. [Safe issue creation](#3-safe-issue-creation)
-4. [Writing issues that run on the first try](#4-writing-issues-that-run-on-the-first-try)
-5. [Splitting large work](#5-splitting-large-work)
-6. [Sequencing chains of issues](#6-sequencing-chains-of-issues)
-7. [Dual reviewer pattern (PQR)](#7-dual-reviewer-pattern-pqr)
-8. [Follow-up and correction](#8-follow-up-and-correction)
-9. [Verification](#9-verification)
-10. [Routing matrix](#10-routing-matrix)
-11. [Tool-call caps](#11-tool-call-caps)
-12. [Token optimization](#12-token-optimization)
-13. [Known limitations](#13-known-limitations)
-14. [Anti-patterns](#14-anti-patterns)
-15. [Issue templates](#15-issue-templates)
-16. [Safety notes](#16-safety-notes)
+3. [Writing issues that run on the first try](#3-writing-issues-that-run-on-the-first-try)
+4. [Splitting large work](#4-splitting-large-work)
+5. [Sequencing chains of issues](#5-sequencing-chains-of-issues)
+6. [Dual reviewer pattern (PQR)](#6-dual-reviewer-pattern-pqr)
+7. [Follow-up and correction](#7-follow-up-and-correction)
+8. [Verification](#8-verification)
+9. [Routing matrix](#9-routing-matrix)
+10. [Tool-call caps](#10-tool-call-caps)
+11. [Token optimization](#11-token-optimization)
+12. [Known limitations](#12-known-limitations)
+13. [Anti-patterns](#13-anti-patterns)
+14. [Issue templates](#14-issue-templates)
+15. [Safety notes](#15-safety-notes)
 
 ---
 
@@ -45,6 +44,8 @@ Do not trigger for trivial one-shot work that is faster to do locally than to de
 
 ## 2. Core workflow
 
+**CRITICAL: Issue creation is a 2-phase flow.** Phase 1 (staging): create WITHOUT an assignee, move to `backlog`, add the assignee. The issue is now READY but NOT LAUNCHED. Phase 2 (activation): move it to `todo` via `multica_update_issue`. The daemon picks up ONLY `todo` + assignee. If you skip phase 2, the issue stays in backlog indefinitely and nothing happens.
+
 ### 2.1 Check readiness
 
 1. Call `multica_list_agents`
@@ -53,7 +54,36 @@ Do not trigger for trivial one-shot work that is faster to do locally than to de
 
 If the user already named an agent, still confirm it exists in `multica_list_agents`.
 
-### 2.2 Decide whether to delegate
+### 2.2 Safe issue creation
+
+The Multica daemon picks up issues whose status is `todo` **and** that have an assignee. Use `backlog` + assignee only as a staging state:
+
+```
+ALWAYS create issues like this:
+
+PHASE 1 - STAGING (issue ready but not launched):
+1. Create the issue WITHOUT an assignee (arrives in `todo`)
+2. Move it to `backlog`: update_issue(status="backlog")
+3. THEN add the assignee: update_issue(assignee="<agent>")
+=> The issue is now `backlog` + assignee. The daemon IGNORES it.
+
+PHASE 2 - ACTIVATION (launches the issue):
+4. Move it to `todo`: update_issue(status="todo")
+=> The daemon picks it up IMMEDIATELY.
+
+If the issue should wait (dependency, human validation), DO NOT do step 4.
+Arthur or the previous agent in the chain can do step 4 when it is time.
+```
+
+Via MCP, the full issue-creation cycle is 4 calls, not 3:
+1. `multica_create_issue` WITHOUT `assignee`
+2. `multica_update_issue` for status `backlog`
+3. `multica_update_issue` for assignee `<agent>`
+4. `multica_update_issue` for status `todo` (THIS STEP LAUNCHES THE ISSUE. Without it, nothing happens.)
+
+For issues you want to keep in reserve (launch later, wait for a dependency), stop at step 3. Arthur or another agent can do step 4 when the time is right.
+
+### 2.3 Decide whether to delegate
 
 Delegate when at least one is true:
 
@@ -68,25 +98,11 @@ Keep work local when:
 - The answer is mostly explanation, not execution
 - The task is urgent and the very next action depends on a result you can produce faster yourself
 
-### 2.3 Pick the agent
+### 2.4 Pick the agent
 
-Use the [routing matrix](#10-routing-matrix) as the default. **Consider context, not just task type.** A task resuming after a crash with partial work may be short enough for a cheaper agent; a fresh architectural investigation should never start on a fast/cheap agent — the reasoning window is insufficient.
+Use the [routing matrix](#9-routing-matrix) as the default. **Consider context, not just task type.** A task resuming after a crash with partial work may be short enough for a cheaper agent; a fresh architectural investigation should never start on a fast/cheap agent — the reasoning window is insufficient.
 
-## 3. Safe issue creation
-
-The Multica daemon picks up issues whose status is `todo` **and** that have an assignee. To avoid an issue being picked up before it is ready:
-
-```
-ALWAYS create backlog-destined issues like this:
-1. Create the issue WITHOUT an assignee (arrives in `todo`)
-2. Move it to `backlog`: update_issue(status="backlog")
-3. THEN add the assignee: update_issue(assignee="<agent>")
-Backlog + assignee = safe. The daemon only picks up `todo` + assignee.
-```
-
-Via MCP: `multica_create_issue` without `assignee`, then `multica_update_issue` for status, then a second `multica_update_issue` for assignee.
-
-## 4. Writing issues that run on the first try
+## 3. Writing issues that run on the first try
 
 Always include:
 
@@ -96,11 +112,11 @@ Always include:
 - Explicit success criteria
 - Constraints, non-goals, and output format
 - The working directory if it matters (`cwd` parameter — it is injected as a markdown hint; the agent must still `cd` manually)
-- A hard cap on `tool_calls` (see [caps table](#11-tool-call-caps))
+- A hard cap on `tool_calls` (see [caps table](#10-tool-call-caps))
 
 **Never include a step that asks the agent to restart, stop, or otherwise manipulate the Multica daemon.** The agent runs inside the daemon and would kill its own parent process.
 
-Use the [issue templates](#15-issue-templates) rather than improvising vague prompts.
+Use the [issue templates](#14-issue-templates) rather than improvising vague prompts.
 
 ### Disambiguate Claude Code vs Claude Desktop vs Codex in briefs
 
@@ -112,7 +128,7 @@ The configuration files and capabilities differ:
 
 When an issue touches MCP servers or client configs, always specify which platform. The classic mistake is installing an MCP entry in the Claude Desktop config and expecting Claude Code to see it (or vice versa).
 
-## 5. Splitting large work
+## 4. Splitting large work
 
 Split when the request contains separable deliverables, different risk levels, or clearly different specialties.
 
@@ -137,7 +153,7 @@ Better: one issue "install the tools + update the config" with a follow-up comme
 
 Good split: Issue A "fix API routes" (backend), Issue B "fix UI components" (frontend) — different files, can run in parallel.
 
-## 6. Sequencing chains of issues
+## 5. Sequencing chains of issues
 
 **Never run parallel issues that touch the same files.** Examples to avoid: multiple CSS fixes on `style.css`, multiple JS edits on `app.js`.
 
@@ -192,7 +208,7 @@ When your work is complete:
 2. Post a comment: "Sequence [PREFIX-XX] through [PREFIX-YY] is complete. Ready for global review."
 ```
 
-## 7. Dual reviewer pattern (PQR)
+## 6. Dual reviewer pattern (PQR)
 
 For hard bugs or quality audits:
 
@@ -202,7 +218,7 @@ For hard bugs or quality audits:
 
 Issue 3 stays in `backlog` until 1 and 2 are `done`. The independence of the two diagnostics is the whole point — do not let them read each other before concluding.
 
-## 8. Follow-up and correction
+## 7. Follow-up and correction
 
 Use `multica_get_issue` to inspect status, comments, latest task state, working directory, and output summary.
 
@@ -226,7 +242,7 @@ Multica has an automatic reviewer that moves `in_review` issues to `done` on a s
 - Use the dual-reviewer pattern above and promote to `done` manually
 - Or drop the assignee and set `blocked` with an explicit comment
 
-## 9. Verification
+## 8. Verification
 
 Do not stop at `done`. Check:
 
@@ -237,7 +253,7 @@ Do not stop at `done`. Check:
 
 **Never trust an agent's self-report as the source of truth for billed model usage.** Use `multica_get_runtime_usage`.
 
-## 10. Routing matrix
+## 9. Routing matrix
 
 Agent names are configurable. These are generic tiers — map them onto your workspace using `multica_list_agents`.
 
@@ -256,7 +272,7 @@ Agent names are configurable. These are generic tiers — map them onto your wor
 | UI/frontend with higher reasoning | Gemini top-tier |
 | Long-horizon overnight / weekend batch | budget/GLM tier |
 
-## 11. Tool-call caps
+## 10. Tool-call caps
 
 Always include a hard cap on `tool_calls` in the issue brief to prevent rabbit holes.
 
@@ -270,22 +286,22 @@ Always include a hard cap on `tool_calls` in the issue brief to prevent rabbit h
 
 If an agent is blocked for more than ~10 minutes on a single problem, post a comment and move on.
 
-## 12. Token optimization
+## 11. Token optimization
 
 - Caching proxies and token-optimizer hooks (where available on the host) should be left on across most tiers.
 - Aggressive output compression ("caveman" modes and similar) is fine on bulk scan / extraction work on fast tiers, **but never on deep-reasoning tiers** — the loss of nuance defeats the reason you chose that tier.
 - For MCP servers that return big JSON payloads, consider a compression/proxy layer. Measured savings vary by workload.
 
-## 13. Known limitations
+## 12. Known limitations
 
 - `cwd` is not a native flag of the underlying `multica issue create` — the MCP injects it into the description. The agent still has to `cd` manually.
 - Short IDs (e.g., `ABC-123`) do not work for `parent_issue_id`. Use the full UUID.
 - If two agents share a name prefix (e.g., `claude-opus` and `claude-opus-4-7`), the CLI refuses assignment. Rename the more specific one.
-- The automatic reviewer promotes `in_review` → `done` on a schedule. See [§8](#8-follow-up-and-correction) for how to avoid surprise promotions.
+- The automatic reviewer promotes `in_review` → `done` on a schedule. See [§7](#7-follow-up-and-correction) for how to avoid surprise promotions.
 - Multica has no persistent memory across runs. Context lives in the issue description and comments.
 - Comments posted through the shell CLI are tagged as agent-authored and are not picked up as triggers by the daemon. Use `multica_add_comment` (MCP) for anything that should re-wake an agent.
 
-## 14. Anti-patterns
+## 13. Anti-patterns
 
 Avoid these:
 
@@ -304,10 +320,11 @@ Avoid these:
 - Using a short ID as `parent_issue_id` — always use the full UUID
 - Assigning a fast/cheap agent to a chained issue — the chaining protocol needs reasoning bandwidth
 - Posting chaining comments through the shell CLI instead of `multica_add_comment`
-- Creating a chained issue as `todo` + assignee before its predecessor is done — use the backlog pattern in [§3](#3-safe-issue-creation)
+- **Never forget step 4 (move to `todo`) after the `backlog` + assignee staging state.** Without this step, the issue stays in backlog indefinitely and the daemon never picks it up. If the issue should launch immediately, all 4 calls must happen back-to-back. If it should wait, document in a comment why it remains in backlog.
+- Creating a chained issue as `todo` + assignee before its predecessor is done — use the staging and activation pattern in [§2.2](#22-safe-issue-creation)
 - Modifying host configs (Claude Code / Claude Desktop / Codex) without a backup + rollback path included in the issue
 
-## 15. Issue templates
+## 14. Issue templates
 
 ### Standard implementation
 
@@ -360,9 +377,9 @@ Structured verdict comment:
 
 ### Chained issue
 
-Standard template + the auto-chain section from [§6](#6-sequencing-chains-of-issues).
+Standard template + the auto-chain section from [§5](#5-sequencing-chains-of-issues).
 
-## 16. Safety notes
+## 15. Safety notes
 
 Delegated Multica agents run with permissive execution settings. Treat them as trusted coding agents with broad local access, not as sandboxed workers.
 
