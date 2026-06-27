@@ -7,7 +7,6 @@ import type { Comment, ListResult } from "../lib/types.js";
 export const multicaListCommentsSchema = z.object({
   issue_id: z.string().min(1),
   limit: z.number().int().min(1).max(200).optional(),
-  offset: z.number().int().min(0).optional(),
   since: z.string().optional(),
 });
 
@@ -27,8 +26,7 @@ export async function multicaListComments(
 ): Promise<ListResult<CommentSummary>> {
   const issueId = await resolveIssueId(input.issue_id);
   const args = ["issue", "comment", "list", issueId];
-  if (input.limit) args.push("--limit", String(input.limit));
-  if (input.offset) args.push("--offset", String(input.offset));
+  if (input.limit) args.push("--recent", String(input.limit));
   if (input.since) args.push("--since", input.since);
 
   const [comments, agents] = await Promise.all([
