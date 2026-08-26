@@ -33,6 +33,13 @@ function cleanupProject(projectId: string | null): void {
   });
 }
 
+function cleanupSquad(squadId: string | null): void {
+  if (!squadId) return;
+  spawnSync("multica", ["squad", "delete", squadId], {
+    stdio: "ignore",
+  });
+}
+
 async function readResponse(
   child: ReturnType<typeof spawn>,
   id: number,
@@ -76,6 +83,7 @@ async function main() {
   const fail: string[] = [];
   let createdProjectId: string | null = null;
   let createdIssueShortId: string | null = null;
+  let createdSquadId: string | null = null;
 
   async function step<T = unknown>(
     label: string,
@@ -151,6 +159,13 @@ async function main() {
           "multica_update_autopilot",
           "multica_update_issue",
           "multica_workspace_members",
+          "multica_list_squads",
+          "multica_get_squad",
+          "multica_create_squad",
+          "multica_update_squad",
+          "multica_squad_member_add",
+          "multica_squad_member_remove",
+          "multica_squad_member_set_role",
         ];
         const missing = required.filter((tool) => !names.has(tool));
         if (missing.length > 0) {
@@ -159,18 +174,22 @@ async function main() {
       },
     );
 
+    let firstAgentName: string | null = null;
+    let secondAgentId: string | null = null;
     await step<{ content: Array<{ type: string; text: string }>; isError?: boolean }>(
       "multica_list_agents returns active agents",
       "tools/call",
       { name: "multica_list_agents", arguments: {} },
       (r) => {
-        const parsed = parseToolText<{ items: unknown[]; state: string }>(r);
+        const parsed = parseToolText<{ items: Array<{ id: string; name: string }>; state: string }>(r);
         if (!Array.isArray(parsed.items) || parsed.items.length === 0) {
           throw new Error(`Expected at least one agent, got ${parsed.items?.length}`);
         }
         if (parsed.state !== "loaded") {
           throw new Error(`Expected state "loaded", got "${parsed.state}"`);
         }
+        firstAgentName = parsed.items[0].name;
+        secondAgentId = parsed.items[1]?.id ?? null;
       },
     );
 
@@ -286,6 +305,132 @@ async function main() {
         }
       },
     );
+
+    const tmpSquadName = `multica-mcp-smoke-squad-DISPOSABLE-${Date.now()}`;
+    await step<{ content: Array<{ type: string; text: string }>; isError?: boolean }>(
+      "multica_create_squad creates a disposable test squad",
+      "tools/call",
+      {
+        name: "multica_create_squad",
+        arguments: {
+          name: tmpSquadName,
+          leader: firstAgentName,
+          description: "Disposable squad created by the multica-mcp smoke test; safe to delete.",
+        },
+      },
+      (r) => {
+        const parsed = parseToolText<{ id: string; name: string; leader_id: string }>(r);
+        if (!parsed.id) throw new Error("missing squad id");
+        if (parsed.name !== tmpSquadName) throw new Error("unexpected squad name");
+        createdSquadId = parsed.id;
+      },
+    );
+
+    await step<{ content: Array<{ type: string; text: string }>; isError?: boolean }>(
+      "multica_list_squads returns the created squad",
+      "tools/call",
+      { name: "multica_list_squads", arguments: {} },
+      (r) => {
+        const parsed = parseToolText<{ items: Array<{ id: string }>; state: string }>(r);
+        if (!createdSquadId) throw new Error("squad not created");
+        if (!parsed.items.some((squad) => squad.id === createdSquadId)) {
+          throw new Error("created squad not returned by list");
+        }
+      },
+    );
+
+    await step<{ content: Array<{ type: string; text: string }>; isError?: boolean }>(
+      "multica_get_squad returns squad details and roster",
+      "tools/call",
+      { name: "multica_get_squad", arguments: { squad_id: createdSquadId } },
+      (r) => {
+        const parsed = parseToolText<{
+          id: string;
+          members: Array<{ member_id: string; role: string }>;
+        }>(r);
+        if (parsed.id !== createdSquadId) throw new Error("wrong squad returned");
+        if (!Array.isArray(parsed.members)) throw new Error("expected members array");
+      },
+    );
+
+    await step<{ content: Array<{ type: string; text: string }>; isError?: boolean }>(
+      "multica_update_squad updates instructions",
+      "tools/call",
+      {
+        name: "multica_update_squad",
+        arguments: {
+          squad_id: createdSquadId,
+          instructions: "Smoke-test leader briefing.",
+        },
+      },
+      (r) => {
+        const parsed = parseToolText<{ id: string }>(r);
+        if (parsed.id !== createdSquadId) throw new Error("wrong squad returned");
+      },
+    );
+
+    if (secondAgentId) {
+      await step<{ content: Array<{ type: string; text: string }>; isError?: boolean }>(
+        "multica_squad_member_add adds an agent member",
+        "tools/call",
+        {
+          name: "multica_squad_member_add",
+          arguments: {
+            squad_id: createdSquadId,
+            member_id: secondAgentId,
+            member_type: "agent",
+            role: "planner",
+          },
+        },
+        (r) => {
+          if (r.isError) throw new Error(`add failed: ${r.content?.[0]?.text}`);
+        },
+      );
+
+      await step<{ content: Array<{ type: string; text: string }>; isError?: boolean }>(
+        "multica_squad_member_set_role changes the member's role",
+        "tools/call",
+        {
+          name: "multica_squad_member_set_role",
+          arguments: {
+            squad_id: createdSquadId,
+            member_id: secondAgentId,
+            member_type: "agent",
+            role: "reviewer",
+          },
+        },
+        (r) => {
+          if (r.isError) throw new Error(`set-role failed: ${r.content?.[0]?.text}`);
+        },
+      );
+
+      await step<{ content: Array<{ type: string; text: string }>; isError?: boolean }>(
+        "multica_squad_member_remove removes the agent member",
+        "tools/call",
+        {
+          name: "multica_squad_member_remove",
+          arguments: {
+            squad_id: createdSquadId,
+            member_id: secondAgentId,
+            member_type: "agent",
+          },
+        },
+        (r) => {
+          const parsed = parseToolText<{ removed: boolean }>(r);
+          if (!parsed.removed) throw new Error("expected removed: true");
+        },
+      );
+    } else {
+      console.log("  (skipping squad member add/set-role/remove: only one agent in workspace)");
+    }
+
+    // Deliberately does NOT call multica_update_issue with assignee_id set to
+    // the squad here: per Multica's squad routing, assigning an issue to a
+    // squad while it isn't in "backlog" status dispatches the leader agent
+    // for a real run. That's a genuine side effect (a paid agent task), not
+    // something an automated smoke test should trigger. assignee_id/assignee
+    // squad support is covered by unit tests on the arg builders and by the
+    // schema/type wiring below instead.
 
     await step<{ content: Array<{ type: string; text: string }>; isError?: boolean }>(
       "multica_add_comment adds a comment",
@@ -414,6 +559,7 @@ async function main() {
   } finally {
     child.kill();
     cleanupProject(createdProjectId);
+    cleanupSquad(createdSquadId);
   }
 
   console.log("\n=== PASS ===");

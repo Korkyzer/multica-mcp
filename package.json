@@ -1,6 +1,6 @@
 {
   "name": "multica-mcp",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Model Context Protocol (MCP) stdio server in TypeScript that wraps the Multica CLI so agents can drive the Multica platform from Claude Desktop, Claude Code, Codex CLI, and Codex Desktop.",
   "license": "MIT",
   "type": "module",

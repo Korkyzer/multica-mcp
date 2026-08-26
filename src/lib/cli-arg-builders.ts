@@ -157,6 +157,94 @@ export function buildIssueRunMessagesArgs(
   return args;
 }
 
+export type SquadCreateArgsInput = {
+  name: string;
+  leader_id: string;
+  description?: string;
+};
+
+export function buildSquadCreateArgs(input: SquadCreateArgsInput): string[] {
+  const args = ["squad", "create", "--name", input.name, "--leader", input.leader_id];
+  if (input.description) args.push("--description", input.description);
+  return args;
+}
+
+export type SquadUpdateArgsInput = {
+  squad_id: string;
+  name?: string;
+  description?: string;
+  instructions?: string;
+  leader_id?: string;
+  avatar_url?: string;
+};
+
+export function buildSquadUpdateArgs(input: SquadUpdateArgsInput): string[] {
+  const args = ["squad", "update", input.squad_id];
+  if (input.name !== undefined) args.push("--name", input.name);
+  if (input.description !== undefined) args.push("--description", input.description);
+  if (input.instructions !== undefined) args.push("--instructions", input.instructions);
+  if (input.leader_id !== undefined) args.push("--leader", input.leader_id);
+  if (input.avatar_url !== undefined) args.push("--avatar-url", input.avatar_url);
+
+  if (args.length === 3) {
+    throw new Error("No fields provided to update.");
+  }
+
+  return args;
+}
+
+export type SquadMemberAddArgsInput = {
+  squad_id: string;
+  member_id: string;
+  member_type?: "agent" | "member";
+  role?: string;
+};
+
+export function buildSquadMemberAddArgs(input: SquadMemberAddArgsInput): string[] {
+  const args = ["squad", "member", "add", input.squad_id, "--member-id", input.member_id];
+  if (input.member_type) args.push("--type", input.member_type);
+  if (input.role) args.push("--role", input.role);
+  return args;
+}
+
+export type SquadMemberRemoveArgsInput = {
+  squad_id: string;
+  member_id: string;
+  member_type?: "agent" | "member";
+};
+
+export function buildSquadMemberRemoveArgs(
+  input: SquadMemberRemoveArgsInput,
+): string[] {
+  const args = ["squad", "member", "remove", input.squad_id, "--member-id", input.member_id];
+  if (input.member_type) args.push("--type", input.member_type);
+  return args;
+}
+
+export type SquadMemberSetRoleArgsInput = {
+  squad_id: string;
+  member_id: string;
+  role: string;
+  member_type?: "agent" | "member";
+};
+
+export function buildSquadMemberSetRoleArgs(
+  input: SquadMemberSetRoleArgsInput,
+): string[] {
+  const args = [
+    "squad",
+    "member",
+    "set-role",
+    input.squad_id,
+    "--member-id",
+    input.member_id,
+    "--role",
+    input.role,
+  ];
+  if (input.member_type) args.push("--member-type", input.member_type);
+  return args;
+}
+
 export type AttachmentDownloadArgsInput = {
   attachment_id: string;
   output_dir?: string;

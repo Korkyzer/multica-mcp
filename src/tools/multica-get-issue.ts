@@ -6,6 +6,7 @@ import {
   getProjectsCached,
 } from "../lib/projects.js";
 import { runMulticaJson } from "../lib/multica-cli.js";
+import { getSquadsCached, mapAssigneeIdToName } from "../lib/squads.js";
 import type { Comment } from "../lib/types.js";
 
 export const multicaGetIssueSchema = z.object({
@@ -19,7 +20,7 @@ export async function multicaGetIssue(input: MulticaGetIssueInput) {
   const issueId = await resolveIssueId(input.issue_id);
   const includeComments = input.include_comments ?? true;
 
-  const [issue, comments, latestRun, agents, projects] = await Promise.all([
+  const [issue, comments, latestRun, agents, projects, squads] = await Promise.all([
     getIssueById(issueId),
     includeComments
       ? runMulticaJson<Comment[]>(["issue", "comment", "list", issueId])
@@ -27,6 +28,7 @@ export async function multicaGetIssue(input: MulticaGetIssueInput) {
     getLatestRunForIssue(issueId),
     getAgentsCached(),
     getProjectsCached(),
+    getSquadsCached(),
   ]);
 
   const base = {
@@ -35,7 +37,13 @@ export async function multicaGetIssue(input: MulticaGetIssueInput) {
     title: issue.title,
     description: issue.description,
     status: issue.status,
-    assignee: mapAgentIdToName(agents, issue.assignee_id),
+    assignee: mapAssigneeIdToName(
+      agents,
+      squads,
+      issue.assignee_id,
+      issue.assignee_type,
+    ),
+    assignee_type: issue.assignee_type,
     project: issue.project_id
       ? getProjectDisplayName(
           projects.find((project) => project.id === issue.project_id) ?? {

@@ -88,7 +88,7 @@ Returns `{ id, name, url }`.
 
 ### `multica_create_issue`
 
-Returns `{ id, short_id, title, status, assignee, url }`.
+Returns `{ id, short_id, title, status, assignee, assignee_type, url }`. `assignee` fuzzy-matches an agent or squad name; `assignee_id` takes an exact agent/squad UUID instead (mutually exclusive with `assignee`).
 
 ```json
 {
@@ -168,13 +168,20 @@ Returns `{ comment_id, created_at }`.
 
 ### `multica_update_issue`
 
-Returns `{ id, short_id, title, status, assignee, priority, updated_at }`.
+Returns `{ id, short_id, title, status, assignee, assignee_type, priority, updated_at }`. `assignee` fuzzy-matches an agent or squad name; `assignee_id` takes an exact agent/squad UUID instead (mutually exclusive with `assignee`). Assigning to a squad routes execution to that squad's leader agent — see [Squads](#squads) below.
 
 ```json
 {
   "issue_id": "ABC-12",
   "status": "in_review",
   "priority": "high"
+}
+```
+
+```json
+{
+  "issue_id": "ABC-12",
+  "assignee_id": "<squad-uuid>"
 }
 ```
 
@@ -318,6 +325,81 @@ Deletes a single trigger from an autopilot.
 { "autopilot_id": "<uuid>", "trigger_id": "<uuid>" }
 ```
 
+## Squads
+
+A Multica squad is a routing object, not a second kind of agent. Squad-routed
+work (issue assignment, `@squad` mentions) always executes as the squad's
+`leader_id` agent — other members are roster context the leader can delegate
+to, they are never fanned out automatically. See the `multica-squads` skill
+in the main Multica CLI/agent docs for the full routing contract.
+
+### `multica_list_squads`
+
+Returns `[{ id, name, description, leader_id, member_count, archived }]`.
+
+```json
+{}
+```
+
+### `multica_get_squad`
+
+Returns `{ id, name, description, instructions, leader_id, archived, members }`
+where `members` is `[{ member_type, member_id, role }]`.
+
+```json
+{ "squad_id": "<squad-uuid>" }
+```
+
+### `multica_create_squad`
+
+Creates a squad with a leader agent (fuzzy-matched by name). Returns
+`{ id, name, leader_id, leader }`.
+
+```json
+{
+  "name": "Lesson Build",
+  "leader": "Hermes",
+  "description": "Builds and QAs new lesson content."
+}
+```
+
+### `multica_update_squad`
+
+Updates name, description, leader-facing `instructions`, `leader`, or
+`avatar_url`. Returns `{ id, name, leader_id, updated_at }`.
+
+```json
+{ "squad_id": "<squad-uuid>", "instructions": "Delegate builds to Cody; escalate blockers to @Mr. Romero." }
+```
+
+### `multica_squad_member_add` / `multica_squad_member_remove` / `multica_squad_member_set_role`
+
+Manage the squad roster. `member_id` is an exact agent or workspace-member
+UUID (from `multica_list_agents` / `multica_workspace_members`); `member_type`
+is `"agent"` (default) or `"member"`.
+
+```json
+{ "squad_id": "<squad-uuid>", "member_id": "<agent-uuid>", "member_type": "agent", "role": "planner" }
+```
+
+```json
+{ "squad_id": "<squad-uuid>", "member_id": "<agent-uuid>", "member_type": "agent", "role": "reviewer" }
+```
+
+```json
+{ "squad_id": "<squad-uuid>", "member_id": "<agent-uuid>", "member_type": "agent" }
+```
+
+### Assigning an issue to a squad
+
+There is no separate "assign to squad" tool — use `multica_create_issue` or
+`multica_update_issue` with `assignee_id` set to the squad's UUID (or
+`assignee` set to the squad's name; it fuzzy-matches agents and squads).
+Assigning to a squad routes execution to that squad's leader agent, not every
+member. Assigning while the issue is in `backlog` status does not immediately
+start work; moving it out of `backlog`, or changing the assignee on a
+non-backlog issue, dispatches the leader for a real run.
+
 ## Smoke test
 
 ```bash
@@ -398,6 +480,8 @@ The Codex app reuses the Codex CLI configuration. As long as `~/.codex/config.to
 - No persistent memory on the Multica side yet; a dedicated skill will come later
 - `cwd` is not a native flag of `multica issue create`; the MCP injects it as a markdown hint
 - If the Multica daemon is down, tools return a structured error: `daemon down, run 'multica daemon start'`
+- All tools shell out to the `multica` CLI on `PATH` (see `src/lib/multica-cli.ts`), so workspace scoping and auth are whatever that CLI session is already logged into — this MCP has no separate credential or workspace-selection surface, including for the squad tools below
+- `multica_workspace_members` and `multica_list_comments` currently fail against a recent `multica` CLI (`unknown flag: --output` / `unknown flag: --limit`) — the CLI's `workspace members` shortcut and `issue comment list --limit/--offset` flags have since changed. Pre-existing drift, not introduced by squad support; tracked for a follow-up fix.
 
 ## Advanced usage
 

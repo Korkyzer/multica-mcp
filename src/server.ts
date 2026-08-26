@@ -112,6 +112,24 @@ import {
   multicaAgentUpdate,
   multicaAgentUpdateSchema,
 } from "./tools/multica-agent-crud.js";
+import {
+  multicaCreateSquad,
+  multicaCreateSquadSchema,
+  multicaGetSquad,
+  multicaGetSquadSchema,
+  multicaListSquads,
+  multicaListSquadsSchema,
+  multicaUpdateSquad,
+  multicaUpdateSquadSchema,
+} from "./tools/multica-squad-crud.js";
+import {
+  multicaSquadMemberAdd,
+  multicaSquadMemberAddSchema,
+  multicaSquadMemberRemove,
+  multicaSquadMemberRemoveSchema,
+  multicaSquadMemberSetRole,
+  multicaSquadMemberSetRoleSchema,
+} from "./tools/multica-squad-members.js";
 
 function resolveLogPath(): string {
   const override = process.env.MULTICA_MCP_LOG_PATH;
@@ -193,7 +211,7 @@ async function main() {
 
   const server = new McpServer({
     name: "multica-mcp",
-    version: "0.3.0",
+    version: "0.4.0",
   });
 
   server.tool(
@@ -219,7 +237,7 @@ async function main() {
 
   server.tool(
     "multica_create_issue",
-    "Create a new issue, optionally assigned to an agent. Use a detailed description (>200 chars) for good agent context. The cwd param is a hint injected into the description because the CLI has no native working-directory flag.",
+    "Create a new issue, optionally assigned to an agent or squad. Use `assignee` for a fuzzy-matched agent/squad name, or `assignee_id` for an exact agent/squad UUID (e.g. from multica_list_squads). Assigning to a squad routes execution to that squad's leader agent, not every member. Use a detailed description (>200 chars) for good agent context. The cwd param is a hint injected into the description because the CLI has no native working-directory flag.",
     multicaCreateIssueSchema.shape,
     wrap("multica_create_issue", async (input) => multicaCreateIssue(input)),
   );
@@ -261,7 +279,7 @@ async function main() {
 
   server.tool(
     "multica_update_issue",
-    "Update an issue's title, description, status, assignee, or priority. Cannot change assignee on done/cancelled issues (reopen first).",
+    "Update an issue's title, description, status, assignee, or priority. `assignee` fuzzy-matches an agent or squad name; `assignee_id` takes an exact agent/squad UUID. Assigning to a squad routes execution to that squad's leader agent. Cannot change assignee on done/cancelled issues (reopen first).",
     multicaUpdateIssueSchema.shape,
     wrap("multica_update_issue", async (input) => multicaUpdateIssue(input)),
   );
@@ -376,6 +394,55 @@ async function main() {
     "Delete a trigger from an autopilot.",
     multicaAutopilotTriggerDeleteSchema.shape,
     wrap("multica_autopilot_trigger_delete", async (input) => multicaAutopilotTriggerDelete(input)),
+  );
+
+  server.tool(
+    "multica_list_squads",
+    "List squads in the current workspace. A squad routes issue/mention work to its leader agent; it does not fan work out to every member. Returns id, name, description, leader_id, member_count, archived.",
+    multicaListSquadsSchema.shape,
+    wrap("multica_list_squads", async () => multicaListSquads()),
+  );
+
+  server.tool(
+    "multica_get_squad",
+    "Get full squad details (name, description, instructions, leader_id) plus its member roster.",
+    multicaGetSquadSchema.shape,
+    wrap("multica_get_squad", async (input) => multicaGetSquad(input)),
+  );
+
+  server.tool(
+    "multica_create_squad",
+    "Create a new squad with a leader agent. Squad-routed work (issue assignment, @mentions) always executes as the leader; other members are roster context for the leader to delegate to, not automatically dispatched.",
+    multicaCreateSquadSchema.shape,
+    wrap("multica_create_squad", async (input) => multicaCreateSquad(input)),
+  );
+
+  server.tool(
+    "multica_update_squad",
+    "Update a squad's name, description, leader-facing instructions, leader agent, or avatar URL.",
+    multicaUpdateSquadSchema.shape,
+    wrap("multica_update_squad", async (input) => multicaUpdateSquad(input)),
+  );
+
+  server.tool(
+    "multica_squad_member_add",
+    "Add an agent or workspace member to a squad roster with a role label. Does not itself route work to that member — squad work still executes as the leader.",
+    multicaSquadMemberAddSchema.shape,
+    wrap("multica_squad_member_add", async (input) => multicaSquadMemberAdd(input)),
+  );
+
+  server.tool(
+    "multica_squad_member_remove",
+    "Remove an agent or workspace member from a squad roster.",
+    multicaSquadMemberRemoveSchema.shape,
+    wrap("multica_squad_member_remove", async (input) => multicaSquadMemberRemove(input)),
+  );
+
+  server.tool(
+    "multica_squad_member_set_role",
+    "Change a squad member's roster role label.",
+    multicaSquadMemberSetRoleSchema.shape,
+    wrap("multica_squad_member_set_role", async (input) => multicaSquadMemberSetRole(input)),
   );
 
   server.tool(

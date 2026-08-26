@@ -1,7 +1,8 @@
 import { z } from "zod";
-import { getAgentsCached, mapAgentIdToName } from "../lib/agents.js";
+import { getAgentsCached } from "../lib/agents.js";
 import { getProjectDisplayName, getProjectsCached } from "../lib/projects.js";
 import { runMulticaJson } from "../lib/multica-cli.js";
+import { getSquadsCached, mapAssigneeIdToName } from "../lib/squads.js";
 import type { IssueListResponse, Issue, ListResult } from "../lib/types.js";
 
 export const multicaIssueSearchSchema = z.object({
@@ -63,9 +64,10 @@ export async function multicaIssueSearch(
     issues = await fallbackFetchAll();
   }
 
-  const [agents, projects] = await Promise.all([
+  const [agents, projects, squads] = await Promise.all([
     getAgentsCached(),
     getProjectsCached(),
+    getSquadsCached(),
   ]);
 
   const matches: IssueMatch[] = [];
@@ -79,7 +81,12 @@ export async function multicaIssueSearch(
       short_id: issue.identifier,
       title: issue.title,
       status: issue.status,
-      assignee: mapAgentIdToName(agents, issue.assignee_id),
+      assignee: mapAssigneeIdToName(
+        agents,
+        squads,
+        issue.assignee_id,
+        issue.assignee_type,
+      ),
       project: issue.project_id
         ? getProjectDisplayName(
             projects.find((p) => p.id === issue.project_id) ?? { id: issue.project_id },
