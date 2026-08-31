@@ -154,3 +154,32 @@ export type RuntimeUsageSummary = {
   cache_write_tokens: number;
   total_tokens: number;
 };
+
+export type SquadMemberPreview = {
+  member_type: "agent" | "member";
+  member_id: string;
+  role?: string;
+};
+
+export type Squad = {
+  id: string;
+  workspace_id: string;
+  name: string;
+  description: string | null;
+  instructions: string | null;
+  avatar_url: string | null;
+  leader_id: string;
+  creator_id?: string;
+  archived_at: string | null;
+  archived_by?: string | null;
+  member_count?: number;
+  member_preview?: SquadMemberPreview[];
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type SquadMember = {
+  member_type: "agent" | "member";
+  member_id: string;
+  role: string;
+};

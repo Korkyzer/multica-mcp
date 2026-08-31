@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
   buildUnknownAssigneeMessage,
+  getAgentsCached,
   resolveAgentByName,
 } from "../lib/agents.js";
 import {
@@ -8,6 +9,12 @@ import {
   resolveProject,
 } from "../lib/projects.js";
 import { runMulticaJson, runMulticaRaw } from "../lib/multica-cli.js";
+import {
+  buildUnknownSquadMessage,
+  getSquadsCached,
+  mapAssigneeIdToName,
+  resolveSquadByName,
+} from "../lib/squads.js";
 import type { Issue } from "../lib/types.js";
 
 const PRIORITIES = ["low", "medium", "high", "urgent"] as const;
@@ -35,6 +42,7 @@ export const multicaCreateIssueSchema = z.object({
   title: z.string().min(1).max(200),
   description: z.string().optional(),
   assignee: z.string().optional(),
+  assignee_id: z.string().optional(),
   project: z.string().optional(),
   priority: z.enum(PRIORITIES).optional().default("medium"),
   parent_issue_id: z.string().optional(),
@@ -61,10 +69,19 @@ function withWorkingDirectoryHint(
 export async function multicaCreateIssue(
   input: MulticaCreateIssueInput,
 ) {
+  if (input.assignee && input.assignee_id) {
+    throw new Error("Provide either assignee or assignee_id, not both.");
+  }
+
   if (input.assignee) {
     const agent = await resolveAgentByName(input.assignee);
-    if (!agent) {
-      throw new Error(await buildUnknownAssigneeMessage(input.assignee));
+    const squad = agent ? undefined : await resolveSquadByName(input.assignee);
+    if (!agent && !squad) {
+      const [agentMessage, squadMessage] = await Promise.all([
+        buildUnknownAssigneeMessage(input.assignee),
+        buildUnknownSquadMessage(input.assignee),
+      ]);
+      throw new Error(`${agentMessage} ${squadMessage}`);
     }
   }
 
@@ -77,6 +94,9 @@ export async function multicaCreateIssue(
 
   if (input.assignee) {
     args.push("--assignee", input.assignee);
+  }
+  if (input.assignee_id) {
+    args.push("--assignee-id", input.assignee_id);
   }
 
   args.push("--priority", input.priority ?? "medium");
@@ -94,14 +114,24 @@ export async function multicaCreateIssue(
   }
 
   const issue = await runMulticaJson<Issue>(args);
-  const appUrl = await resolveAppUrl();
+  const [appUrl, agents, squads] = await Promise.all([
+    resolveAppUrl(),
+    getAgentsCached(),
+    getSquadsCached(),
+  ]);
 
   return {
     id: issue.id,
     short_id: issue.identifier,
     title: issue.title,
     status: issue.status,
-    assignee: input.assignee ?? null,
+    assignee: mapAssigneeIdToName(
+      agents,
+      squads,
+      issue.assignee_id,
+      issue.assignee_type,
+    ),
+    assignee_type: issue.assignee_type,
     url: appUrl ? `${appUrl}/issues/${issue.id}` : null,
   };
 }

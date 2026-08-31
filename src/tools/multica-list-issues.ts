@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { getAgentsCached, mapAgentIdToName } from "../lib/agents.js";
+import { getAgentsCached } from "../lib/agents.js";
 import {
   buildUnknownProjectMessage,
   getProjectDisplayName,
@@ -7,6 +7,7 @@ import {
   resolveProject,
 } from "../lib/projects.js";
 import { runMulticaJson } from "../lib/multica-cli.js";
+import { getSquadsCached, mapAssigneeIdToName } from "../lib/squads.js";
 import type { IssueListResponse, ListResult } from "../lib/types.js";
 
 const STATUSES = [
@@ -81,10 +82,11 @@ export async function multicaListIssues(
     args.push("--project", project.id);
   }
 
-  const [response, agents, projects] = await Promise.all([
+  const [response, agents, projects, squads] = await Promise.all([
     runMulticaJson<IssueListResponse>(args),
     getAgentsCached(),
     getProjectsCached(),
+    getSquadsCached(),
   ]);
 
   let issues = response.issues;
@@ -117,7 +119,12 @@ export async function multicaListIssues(
     short_id: issue.identifier,
     title: issue.title,
     status: issue.status,
-    assignee: mapAgentIdToName(agents, issue.assignee_id),
+    assignee: mapAssigneeIdToName(
+      agents,
+      squads,
+      issue.assignee_id,
+      issue.assignee_type,
+    ),
     project: issue.project_id
       ? getProjectDisplayName(
           projects.find((project) => project.id === issue.project_id) ?? {

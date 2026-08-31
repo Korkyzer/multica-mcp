@@ -18,6 +18,11 @@ import {
   buildAutopilotTriggerDeleteArgs,
   buildAutopilotTriggerUpdateArgs,
   buildIssueRunMessagesArgs,
+  buildSquadCreateArgs,
+  buildSquadMemberAddArgs,
+  buildSquadMemberRemoveArgs,
+  buildSquadMemberSetRoleArgs,
+  buildSquadUpdateArgs,
 } from "../src/lib/cli-arg-builders.ts";
 import { parseAttachmentDownloadPath } from "../src/lib/attachment-download.ts";
 import { closestMatch, levenshtein } from "../src/lib/fuzzy.ts";
@@ -279,6 +284,110 @@ test("autopilot schemas: get/update/delete/trigger require autopilot_id", () => 
     assert.doesNotThrow(() => schema.parse({ autopilot_id: "auto-123" }));
     assert.throws(() => schema.parse({ id: "auto-123" }), /autopilot_id/);
   }
+});
+
+test("buildSquadCreateArgs: uses squad create subcommand", () => {
+  assert.deepEqual(
+    buildSquadCreateArgs({
+      name: "Lesson Build",
+      leader_id: "agent-123",
+      description: "Builds lesson plans.",
+    }),
+    [
+      "squad",
+      "create",
+      "--name",
+      "Lesson Build",
+      "--leader",
+      "agent-123",
+      "--description",
+      "Builds lesson plans.",
+    ],
+  );
+});
+
+test("buildSquadUpdateArgs: serializes updated fields with CLI flag names", () => {
+  assert.deepEqual(
+    buildSquadUpdateArgs({
+      squad_id: "squad-123",
+      name: "New name",
+      leader_id: "agent-456",
+    }),
+    ["squad", "update", "squad-123", "--name", "New name", "--leader", "agent-456"],
+  );
+});
+
+test("buildSquadUpdateArgs: rejects empty updates", () => {
+  assert.throws(
+    () => buildSquadUpdateArgs({ squad_id: "squad-123" }),
+    /No fields provided to update/,
+  );
+});
+
+test("buildSquadMemberAddArgs: uses --type flag", () => {
+  assert.deepEqual(
+    buildSquadMemberAddArgs({
+      squad_id: "squad-123",
+      member_id: "agent-456",
+      member_type: "agent",
+      role: "builder",
+    }),
+    [
+      "squad",
+      "member",
+      "add",
+      "squad-123",
+      "--member-id",
+      "agent-456",
+      "--type",
+      "agent",
+      "--role",
+      "builder",
+    ],
+  );
+});
+
+test("buildSquadMemberRemoveArgs: uses --type flag", () => {
+  assert.deepEqual(
+    buildSquadMemberRemoveArgs({
+      squad_id: "squad-123",
+      member_id: "member-789",
+      member_type: "member",
+    }),
+    [
+      "squad",
+      "member",
+      "remove",
+      "squad-123",
+      "--member-id",
+      "member-789",
+      "--type",
+      "member",
+    ],
+  );
+});
+
+test("buildSquadMemberSetRoleArgs: uses --member-type flag, not --type", () => {
+  assert.deepEqual(
+    buildSquadMemberSetRoleArgs({
+      squad_id: "squad-123",
+      member_id: "agent-456",
+      member_type: "agent",
+      role: "planner",
+    }),
+    [
+      "squad",
+      "member",
+      "set-role",
+      "squad-123",
+      "--member-id",
+      "agent-456",
+      "--role",
+      "planner",
+      "--member-type",
+      "agent",
+    ],
+  );
 });
 
 // --- resolveIssueId ---

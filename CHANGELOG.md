@@ -4,6 +4,24 @@ All notable changes to this project are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-08-26
+
+### Added
+
+- Squad tools (MRR-15): `multica_list_squads`, `multica_get_squad`,
+  `multica_create_squad`, `multica_update_squad`, `multica_squad_member_add`,
+  `multica_squad_member_remove`, `multica_squad_member_set_role`. All shell
+  out through the same `multica` CLI process as every other tool, so
+  workspace scoping and auth are unchanged — no new credential surface.
+- `multica_create_issue` / `multica_update_issue`: `assignee` now also
+  fuzzy-matches squad names (previously agent-only), and a new `assignee_id`
+  field takes an exact agent/squad UUID directly (mutually exclusive with
+  `assignee`). Assigning to a squad routes execution to that squad's leader
+  agent per Multica's routing rules.
+- `multica_list_issues`, `multica_get_issue`, `multica_issue_search`: the
+  `assignee` field in results now resolves squad-assigned issues to the
+  squad's name instead of falling back to a raw UUID.
+
 ## [0.3.0] - 2026-04-19
 
 ### Added
