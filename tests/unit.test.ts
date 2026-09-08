@@ -253,18 +253,21 @@ test("buildAttachmentDownloadArgs: includes output_dir when provided", () => {
   );
 });
 
-test("parseAttachmentDownloadPath: preserves spaces in returned path", () => {
+test("parseAttachmentDownloadPath: extracts path from the CLI's JSON object", () => {
   assert.equal(
-    parseAttachmentDownloadPath("/tmp/My Report.pdf\n"),
+    parseAttachmentDownloadPath(
+      '{\n  "filename": "Report.pdf",\n  "id": "abc",\n  "path": "/tmp/My Report.pdf",\n  "size": "123"\n}\n',
+    ),
     "/tmp/My Report.pdf",
   );
 });
 
-test("parseAttachmentDownloadPath: uses the last non-empty line", () => {
-  assert.equal(
-    parseAttachmentDownloadPath("\n/tmp/downloads/Quarterly Notes.txt\n\n"),
-    "/tmp/downloads/Quarterly Notes.txt",
-  );
+test("parseAttachmentDownloadPath: throws on non-JSON output instead of returning a bogus path", () => {
+  assert.throws(() => parseAttachmentDownloadPath("not json"));
+});
+
+test("parseAttachmentDownloadPath: throws when the path field is missing", () => {
+  assert.throws(() => parseAttachmentDownloadPath('{"filename":"x.pdf"}'));
 });
 
 test("autopilot schemas: get/update/delete/trigger require autopilot_id", () => {
